@@ -15,6 +15,16 @@ function loginService($logonCredential) {
   }
 }
 
+function makeSureGetCredentialWork() {
+
+}
+
+function readKey() {
+  $keyStroke = [System.Console]::ReadKey($true)
+  $keyStroke = ($keyStroke).key
+  return $keyStroke
+}
+
 # Provide license option base on skuFriendlyName.csv
 function provideAvailableLicenseOption() {
   $importAvaLicOption = Import-Csv -Path filesystem::.\skuFriendlyName.csv
@@ -28,39 +38,40 @@ function provideAvailableLicenseOption() {
   Return $avaListOption
 }
 
-function readKey() {
-  $keyStroke = [System.Console]::ReadKey($true)
-  $keyStroke = ($keyStroke).key
-  return $keyStroke
-}
-
-# Create csv file function
-function createCsvFile($fileName) {
-  # Process file name - add timestamp to file name
-  $fileLogDate = (Get-Date -Format yyyy-mm-dd_HH-mm-ss)
-  $procedFileName = "$fileName" + "_" + "$fileLogDate.csv" # csv file name
-  # create File
-  $finalFileName = (New-Item -Path filesystem::.\ -Name $procedFileName -ItemType "file").Name
-  Return $finalFileName
-}
-
 # Export csv file for user with specified sku
 function getUserWithSpecifiedSku($sku) {
-  # Create csv file for repot
-  $fileName = createCsvFile "userList_$sku"
   # Export user list with specified license
   $userWithSkuList = Get-MsolUser -All | Where-Object { $_.Licenses.AccountSku.SkuPartNumber -eq $sku } | Select-Object UserPrincipalName, Licenses
   # Empty hash table to store proccessed data
-  $userPNAndSpecifiedTable = @{}
+  $userAndSku = @()
   foreach ($user in $userWithSkuList) {
     $userpn = $user.UserPrincipalName
     # Get specified sku name (sku name is diffrent to product name)
     $userSpecifiedSku = $user.licenses.accountsku.skupartnumber | Where-Object { $_ -eq $sku }
-    $userPNAndSpecifiedTable.Add($userpn, $userSpecifiedSku)
+    $userAndSku += New-Object -TypeName psobject -Property @{userPN = $userpn; skupartnumber = $userSpecifiedSku}
   }
   # Process key, value to more friendly name
-  $userPNAndSpecifiedTable.GetEnumerator() | Select-Object -Property @{N = "UserPN"; E = { $_.Key } }, @{N = "skupartnumber"; E = { $_.Value } } | 
-  Export-Csv -Path filesystem::.\$fileName -Append -Force -NoTypeInformation
+  return $userAndSku
+}
+
+# Combine user principal name, skupartnumber and product name for further process
+function getUserSkuProductName($userAndSku, $avaListOption) {
+  $userSkuProductName = @()
+  foreach ($user in $userAndSku) {
+    $productName = $userAndSku | Where-Object {$_.skupartnumber -eq $user.skupartnumber}
+    $userSkuProductName += New-Object -TypeName psobject @{userPN = $user.userPN; skupartnumber = $user.skupartnumber; productName = $productName.productName}
+  }
+  return $userSkuProductName
+}
+
+# Create csv file function
+function createCsvFile($fileName, $productName) {
+  # Process file name - add timestamp to file name
+  $fileLogDate = (Get-Date -Format yyyy-mm-dd_HH-mm-ss)
+  $procedFileName = "$fileName" + "_" + "$productName" + "_" + "$fileLogDate.csv" # csv file name
+  # Create csv file for repot
+  $finalFileName = (New-Item -Path filesystem::.\ -Name $procedFileName -ItemType "file").Name
+  Return $finalFileName
 }
 
 function assignLicense($userPN, $newLicense) {
@@ -147,10 +158,9 @@ function UIAssignUnassignLicense($UIOption) {
 #------------------------------------------------------------------------------------------------#
 # tạo ra custom object dựa trên cái file skuFriendlyName.csv
 # kiểu có bao nhiêu row thì nó tự generate ra đến đấy
-function UILicenseOption($choseOption) {
+function UILicenseOption($choseOption, $licenseOptions) {
   do {
     Clear-Host
-    $licenseOptions = provideAvailableLicenseOption
     $optionArrary = @()
     if ("A" -eq $choseOption) { 
       Write-Host "Assigning license" -ForegroundColor Yellow
@@ -168,22 +178,52 @@ function UILicenseOption($choseOption) {
     $enteredOption = Read-Host "Input your option: "
   } until ($optionArrary -contains $enteredOption)
   $selectedOption = $licenseOptions | Where-Object { $_.counter -eq $enteredOption }
+  $selectedOption
   return $selectedOption
 }
 
-# Export  #
+# Export csv UI#
 #------------------------------------------------------------------------------------------------#
-function UIExportUserWithSpecLic() {
-  
+function UIExportUserWithSpecLic($sku, $licenseOptions, $fileName) {
+  $userAndSku = getUserWithSpecifiedSku $sku
+  $userSkuProductName = getUserSkuProductName $userAndSku $licenseOptions
+  $finalFileName = createCsvFile $fileName $userSkuProductName.productName
+  $userSkuProductName | Export-csv -Path filesystem::.\$finalFileName -Force -NoTypeInformation -Append
 }
 
 
 ##################################################################################################
 # ACTION GOES HERE YEY #
 ##################################################################################################
-# UILogin
+UILogin
+$licenseOptions = provideAvailableLicenseOption
 $functionOption = UIChoosingOption
-$importFromOption = UIAssignUnassignLicense $functionOption
-$LicenseToExport = UILicenseOption $functionOption
+switch ($functionOption) {
+  "A" {
+    $importFromOption = UIAssignUnassignLicense $functionOption
+    switch ($importFromOption) {
+      "A" {
+        $LicenseToExport = UILicenseOption $functionOption $licenseOptions
+        $userAndSku = 
+        
+      }
+      "B" {
+        $LicenseToExport = UILicenseOption $functionOption $licenseOptions
+      }
+    }
+  }
+  "B" {
+    $importFromOption = UIAssignUnassignLicense $functionOption
+    switch ($importFromOption) {
+      "A" {
+        $LicenseToExport = UILicenseOption $functionOption $licenseOptions
+      }
+      "B" {
+        $LicenseToExport = UILicenseOption $functionOption $licenseOptions
+      }
+    }
+  }
+  "C" {
 
-
+  }
+}
