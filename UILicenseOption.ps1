@@ -1,22 +1,28 @@
 function provideAvailableLicenseOption() {
   $importAvaLicOption = Import-Csv -Path filesystem::.\skuFriendlyName.csv
+  $avaListOption = @()
   $counter = 0
-  $avaLicOption = @()
   foreach ($option in $importAvaLicOption) {
     $counter ++
-    $avaLicOption += New-Object -TypeName psobject -Property @{counter = $counter; SkuPartNumber = $options.SkuPartNumber; ProductName = $options.ProductName}
+    $avaListOption += New-Object -TypeName psobject -Property @{counter = $counter; skupartnumber = $option.skupartnumber; productName = $option.ProductName }
   }
-  Return $avaLicOption
+  Return $avaListOption
 }
 
 function UILicenseOption() {
-  $counter = 0
-  $licenseOptions = provideAvailableLicenseOption
-  $optionArrary = @()
-  $availableOptions = [PSCustomObject]@{}
-  foreach ($option in $licenseOptions) {
-    $counter ++
-    $optionArrary += $counter
-    $availableOptions += New-Object -TypeName psobject -Property @{}
-  }
+  do {
+    Clear-Host
+    $licenseOptions = provideAvailableLicenseOption
+    $optionArrary = @()
+    Write-Host "Please choose product name" -ForegroundColor Yellow
+    foreach ($option in $licenseOptions) {
+      $optionArrary += $option.counter
+      Write-Host $option.counter ":" $option.ProductName
+    }
+    Write-Host ""
+    $enteredOption = Read-Host "Input your option: "
+  } until ($optionArrary -contains $enteredOption)
+  $selectedOption = $licenseOptions | Where-Object {$_.counter -eq $enteredOption}
+  return $selectedOption
 }
+UILicenseOption

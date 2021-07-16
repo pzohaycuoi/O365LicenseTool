@@ -40,20 +40,21 @@ function getUserWithSpecifiedSku($sku) {
     $userPNAndSpecifiedTable.Add($userpn, $userSpecifiedSku)
   }
   # Process key, value to more friendly name
-  $userPNAndSpecifiedTable.GetEnumerator() | Select-Object -Property @{N = "UserPN"; E = { $_.Key } }, @{N = "License"; E = { $_.Value } } | 
+  $userPNAndSpecifiedTable.GetEnumerator() | Select-Object -Property @{N = "UserPN"; E = { $_.Key } }, @{N = "skupartnumber"; E = { $_.Value } } | 
   Export-Csv -Path filesystem::.\$fileName -Append -Force -NoTypeInformation
 }
 
 # Provide license option base on skuFriendlyName.csv
 function provideAvailableLicenseOption() {
   $importAvaLicOption = Import-Csv -Path filesystem::.\skuFriendlyName.csv
+  $avaListOption = @()
   $counter = 0
-  $avaLicOption = @()
+  # add counter into hash table for UILicenseOption option
   foreach ($option in $importAvaLicOption) {
     $counter ++
-    $avaLicOption += New-Object -TypeName psobject -Property @{counter = $counter; SkuPartNumber = $options.SkuPartNumber; ProductName = $options.ProductName}
+    $avaListOption += New-Object -TypeName psobject -Property @{counter = $counter; skupartnumber = $option.skupartnumber; productName = $option.ProductName }
   }
-  Return $avaLicOption
+  Return $avaListOption
 }
 
 function assignLicense($userPN, $newLicense) {
@@ -109,22 +110,38 @@ function UIChoosingOption() {
   Return $keyStroke
 }
 
-# Assign License UI #
+# Assign/Unassign License UI #
 #------------------------------------------------------------------------------------------------#
-function UIAssignLicense() {
-  $optionArrary = @("A", "B")
-  do {
-    Clear-Host
-    Write-Host "Please choose option" -ForegroundColor Yellow
-    Write-Host "A: Assign license to user with specific license"
-    Write-Host "B: Assign license to user from csv file"
-    Write-Host -NoNewline "Input your option: "
-    $keyStroke = [System.Console]::ReadKey($true)
-    $keyStroke = ($keyStroke).key
-    $keyStroke
-    Start-Sleep -Seconds 1
-  } until ($optionArrary -contains $keyStroke)
-  Return $keyStroke
+function UIAssignUnassignLicense($UIOption) {
+  if ("A" -eq $UIOption) {
+    $optionArrary = @("A", "B")
+    do {
+      Clear-Host
+      Write-Host "Please choose option" -ForegroundColor Yellow
+      Write-Host "A: Assign license to user with specific license"
+      Write-Host "B: Assign license to user from csv file"
+      Write-Host -NoNewline "Input your option: "
+      $keyStroke = [System.Console]::ReadKey($true)
+      $keyStroke = ($keyStroke).key
+      $keyStroke
+      Start-Sleep -Seconds 1
+    } until ($optionArrary -contains $keyStroke)
+    Return $keyStroke
+  }
+  elseif ("B" -eq $UIOption) {
+    $optionArrary = @("A", "B")
+    do {
+      Clear-Host
+      Write-Host "Please choose option" -ForegroundColor Yellow
+      Write-Host "A: Un-assign license to user with specific license"
+      Write-Host "B: Un-assign license to user from csv file"
+      Write-Host -NoNewline "Input your option: "
+      $keyStroke = [System.Console]::ReadKey($true)
+      $keyStroke = ($keyStroke).key
+      $keyStroke
+      Start-Sleep -Seconds 1
+    } until ($optionArrary -contains $keyStroke)
+  }
 }
 
 # Choose License UI #
@@ -132,25 +149,25 @@ function UIAssignLicense() {
 # tạo ra custom object dựa trên cái file skuFriendlyName.csv
 # kiểu có bao nhiêu row thì nó tự generate ra đến đấy
 function UILicenseOption() {
-  $counter = 0
-  $licenseOptions = provideAvailableLicenseOption
-  $optionArrary = @()
-  $availableOptions = [PSCustomObject]@{}
-  foreach ($option in $licenseOptions) {
-    $counter ++
-    $optionArrary += $counter
-    $availableOptions += New-Object -TypeName psobject -Property @{}
-  }
+  do {
+    Clear-Host
+    $licenseOptions = provideAvailableLicenseOption
+    $optionArrary = @()
+    Write-Host "Please choose product name" -ForegroundColor Yellow
+    foreach ($option in $licenseOptions) {
+      $optionArrary += $option.counter
+      Write-Host $option.counter ":" $option.ProductName
+    }
+    Write-Host ""
+    $enteredOption = Read-Host "Input your option: "
+  } until ($optionArrary -contains $enteredOption)
+  $selectedOption = $licenseOptions | Where-Object { $_.counter -eq $enteredOption }
+  return $selectedOption
 }
 
-# Assign/Un-assign user with specific license UI #
+# Export  #
 #------------------------------------------------------------------------------------------------#
-function UIAssignOrUnAssign {
-  param (
-    OptionalParameters
-  )
-  
-}
+
 
 ##################################################################################################
 # ACTION GOES HERE YEY #
