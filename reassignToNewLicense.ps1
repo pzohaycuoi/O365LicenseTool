@@ -15,6 +15,25 @@ function loginService($logonCredential) {
   }
 }
 
+# Provide license option base on skuFriendlyName.csv
+function provideAvailableLicenseOption() {
+  $importAvaLicOption = Import-Csv -Path filesystem::.\skuFriendlyName.csv
+  $avaListOption = @()
+  $counter = 0
+  # add counter into hash table for UILicenseOption option
+  foreach ($option in $importAvaLicOption) {
+    $counter ++
+    $avaListOption += New-Object -TypeName psobject -Property @{counter = $counter; skupartnumber = $option.skupartnumber; productName = $option.ProductName }
+  }
+  Return $avaListOption
+}
+
+function readKey() {
+  $keyStroke = [System.Console]::ReadKey($true)
+  $keyStroke = ($keyStroke).key
+  return $keyStroke
+}
+
 # Create csv file function
 function createCsvFile($fileName) {
   # Process file name - add timestamp to file name
@@ -42,19 +61,6 @@ function getUserWithSpecifiedSku($sku) {
   # Process key, value to more friendly name
   $userPNAndSpecifiedTable.GetEnumerator() | Select-Object -Property @{N = "UserPN"; E = { $_.Key } }, @{N = "skupartnumber"; E = { $_.Value } } | 
   Export-Csv -Path filesystem::.\$fileName -Append -Force -NoTypeInformation
-}
-
-# Provide license option base on skuFriendlyName.csv
-function provideAvailableLicenseOption() {
-  $importAvaLicOption = Import-Csv -Path filesystem::.\skuFriendlyName.csv
-  $avaListOption = @()
-  $counter = 0
-  # add counter into hash table for UILicenseOption option
-  foreach ($option in $importAvaLicOption) {
-    $counter ++
-    $avaListOption += New-Object -TypeName psobject -Property @{counter = $counter; skupartnumber = $option.skupartnumber; productName = $option.ProductName }
-  }
-  Return $avaListOption
 }
 
 function assignLicense($userPN, $newLicense) {
@@ -102,9 +108,7 @@ function UIChoosingOption() {
     Write-Host "B: Un-assign License"
     Write-Host "C: Assign and Un-assign License"
     Write-Host -NoNewline "Input your option: "
-    $keyStroke = [System.Console]::ReadKey($true)
-    $keyStroke = ($keyStroke).key
-    $keyStroke
+    $keyStroke = readKey
     Start-Sleep -Seconds 1
   } until ($optionArrary -contains $keyStroke)
   Return $keyStroke
@@ -121,10 +125,7 @@ function UIAssignUnassignLicense($UIOption) {
       Write-Host "A: Assign license to user with specific license"
       Write-Host "B: Assign license to user from csv file"
       Write-Host -NoNewline "Input your option: "
-      $keyStroke = [System.Console]::ReadKey($true)
-      $keyStroke = ($keyStroke).key
-      $keyStroke
-      Start-Sleep -Seconds 1
+      $keyStroke = readKey
     } until ($optionArrary -contains $keyStroke)
     Return $keyStroke
   }
@@ -133,14 +134,12 @@ function UIAssignUnassignLicense($UIOption) {
     do {
       Clear-Host
       Write-Host "Please choose option" -ForegroundColor Yellow
-      Write-Host "A: Un-assign license to user with specific license"
-      Write-Host "B: Un-assign license to user from csv file"
+      Write-Host "A: Un-assign license from user with specific license"
+      Write-Host "B: Un-assign license from user from csv file"
       Write-Host -NoNewline "Input your option: "
-      $keyStroke = [System.Console]::ReadKey($true)
-      $keyStroke = ($keyStroke).key
-      $keyStroke
-      Start-Sleep -Seconds 1
+      $keyStroke = readKey
     } until ($optionArrary -contains $keyStroke)
+    Return $keyStroke
   }
 }
 
@@ -148,12 +147,19 @@ function UIAssignUnassignLicense($UIOption) {
 #------------------------------------------------------------------------------------------------#
 # tạo ra custom object dựa trên cái file skuFriendlyName.csv
 # kiểu có bao nhiêu row thì nó tự generate ra đến đấy
-function UILicenseOption() {
+function UILicenseOption($choseOption) {
   do {
     Clear-Host
     $licenseOptions = provideAvailableLicenseOption
     $optionArrary = @()
-    Write-Host "Please choose product name" -ForegroundColor Yellow
+    if ("A" -eq $choseOption) { 
+      Write-Host "Assigning license" -ForegroundColor Yellow
+      Write-Host "Please choose product to assign" -ForegroundColor Yellow
+    }
+    elseif ("B" -eq $choseOption) {
+      Write-Host "Un-assigning license" -ForegroundColor Yellow
+      Write-Host "Please choose product to un-assign" -ForegroundColor Yellow
+    }
     foreach ($option in $licenseOptions) {
       $optionArrary += $option.counter
       Write-Host $option.counter ":" $option.ProductName
@@ -167,9 +173,17 @@ function UILicenseOption() {
 
 # Export  #
 #------------------------------------------------------------------------------------------------#
+function UIExportUserWithSpecLic() {
+  
+}
 
 
 ##################################################################################################
 # ACTION GOES HERE YEY #
 ##################################################################################################
-# EMPTY JUST LIKE MY SOUL
+# UILogin
+$functionOption = UIChoosingOption
+$importFromOption = UIAssignUnassignLicense $functionOption
+$LicenseToExport = UILicenseOption $functionOption
+
+
