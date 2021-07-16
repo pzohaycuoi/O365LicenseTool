@@ -74,6 +74,16 @@ function createCsvFile($fileName, $productName) {
   Return $finalFileName
 }
 
+function importExportedCsv($finalFileName) {
+  $importExpCsv = Import-csv -Path filesystem::.\$finalFileName
+  return $importExpCsv
+}
+
+# Check if sku already exist
+function checkIfExist($userPN, $licenseOptions) {
+  
+}
+
 function assignLicense($userPN, $newLicense) {
   Set-MsolUserLicense -UserPrincipalName $userPN -AddLicenses $newLicense
 }
@@ -158,7 +168,7 @@ function UIAssignUnassignLicense($UIOption) {
 #------------------------------------------------------------------------------------------------#
 # tạo ra custom object dựa trên cái file skuFriendlyName.csv
 # kiểu có bao nhiêu row thì nó tự generate ra đến đấy
-function UILicenseOption($choseOption, $licenseOptions) {
+function UILicenseOption($choseOption, $avaListOption) {
   do {
     Clear-Host
     $optionArrary = @()
@@ -170,25 +180,26 @@ function UILicenseOption($choseOption, $licenseOptions) {
       Write-Host "Un-assigning license" -ForegroundColor Yellow
       Write-Host "Please choose product to un-assign" -ForegroundColor Yellow
     }
-    foreach ($option in $licenseOptions) {
+    foreach ($option in $avaListOption) {
       $optionArrary += $option.counter
       Write-Host $option.counter ":" $option.ProductName
     }
     Write-Host ""
     $enteredOption = Read-Host "Input your option: "
   } until ($optionArrary -contains $enteredOption)
-  $selectedOption = $licenseOptions | Where-Object { $_.counter -eq $enteredOption }
+  $selectedOption = $avaListOption | Where-Object { $_.counter -eq $enteredOption }
   $selectedOption
   return $selectedOption
 }
 
 # Export csv UI#
 #------------------------------------------------------------------------------------------------#
-function UIExportUserWithSpecLic($sku, $licenseOptions, $fileName) {
+function UIExportUserWithSpecLic($sku, $avaListOption, $fileName) {
   $userAndSku = getUserWithSpecifiedSku $sku
-  $userSkuProductName = getUserSkuProductName $userAndSku $licenseOptions
+  $userSkuProductName = getUserSkuProductName $userAndSku $avaListOption
   $finalFileName = createCsvFile $fileName $userSkuProductName.productName
   $userSkuProductName | Export-csv -Path filesystem::.\$finalFileName -Force -NoTypeInformation -Append
+  return $finalFileName
 }
 
 
@@ -196,30 +207,30 @@ function UIExportUserWithSpecLic($sku, $licenseOptions, $fileName) {
 # ACTION GOES HERE YEY #
 ##################################################################################################
 UILogin
-$licenseOptions = provideAvailableLicenseOption
-$functionOption = UIChoosingOption
-switch ($functionOption) {
+$avaListOption = provideAvailableLicenseOption
+$choseOption = UIChoosingOption
+switch ($choseOption) {
   "A" {
-    $importFromOption = UIAssignUnassignLicense $functionOption
+    $importFromOption = UIAssignUnassignLicense $choseOption
     switch ($importFromOption) {
       "A" {
-        $LicenseToExport = UILicenseOption $functionOption $licenseOptions
-        $userAndSku = 
+        $selectedOption = UILicenseOption $choseOption $avaListOption
+        
         
       }
       "B" {
-        $LicenseToExport = UILicenseOption $functionOption $licenseOptions
+        $selectedOption = UILicenseOption $choseOption $avaListOption
       }
     }
   }
   "B" {
-    $importFromOption = UIAssignUnassignLicense $functionOption
+    $importFromOption = UIAssignUnassignLicense $choseOption
     switch ($importFromOption) {
       "A" {
-        $LicenseToExport = UILicenseOption $functionOption $licenseOptions
+        $selectedOption = UILicenseOption $choseOption $avaListOption
       }
       "B" {
-        $LicenseToExport = UILicenseOption $functionOption $licenseOptions
+        $selectedOption = UILicenseOption $choseOption $avaListOption
       }
     }
   }
