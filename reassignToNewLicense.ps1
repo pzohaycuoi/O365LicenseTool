@@ -39,7 +39,7 @@ function provideAvailableLicenseOption() {
 }
 
 # Export csv file for user with specified sku
-function getUserWithSpecifiedSku($sku) {
+function getUserWithSpecifiedSku($skuPartNumber) {
   # Export user list with specified license
   $userWithSkuList = Get-MsolUser -All | Where-Object { $_.Licenses.AccountSku.SkuPartNumber -eq $sku } | Select-Object UserPrincipalName, Licenses
   # Empty hash table to store proccessed data
@@ -47,7 +47,7 @@ function getUserWithSpecifiedSku($sku) {
   foreach ($user in $userWithSkuList) {
     $userpn = $user.UserPrincipalName
     # Get specified sku name (sku name is diffrent to product name)
-    $userSpecifiedSku = $user.licenses.accountsku.skupartnumber | Where-Object { $_ -eq $sku }
+    $userSpecifiedSku = $user.licenses.accountsku.skupartnumber | Where-Object { $_ -eq $skuPartNumber }
     $userAndSku += New-Object -TypeName psobject -Property @{userPN = $userpn; skupartnumber = $userSpecifiedSku}
   }
   # Process key, value to more friendly name
@@ -194,8 +194,8 @@ function UILicenseOption($choseOption, $avaListOption) {
 
 # Export csv UI#
 #------------------------------------------------------------------------------------------------#
-function UIExportUserWithSpecLic($sku, $avaListOption, $fileName) {
-  $userAndSku = getUserWithSpecifiedSku $sku
+function UIExportUserWithSpecLic($skuPartNumber, $avaListOption, $fileName) {
+  $userAndSku = getUserWithSpecifiedSku $skuPartNumber
   $userSkuProductName = getUserSkuProductName $userAndSku $avaListOption
   $finalFileName = createCsvFile $fileName $userSkuProductName.productName
   $userSkuProductName | Export-csv -Path filesystem::.\$finalFileName -Force -NoTypeInformation -Append
@@ -215,8 +215,7 @@ switch ($choseOption) {
     switch ($importFromOption) {
       "A" {
         $selectedOption = UILicenseOption $choseOption $avaListOption
-        
-        
+        $finalFileName = UIExportUserWithSpecLic $selectedOption.skupartnumber $avaListOption "concac"
       }
       "B" {
         $selectedOption = UILicenseOption $choseOption $avaListOption
