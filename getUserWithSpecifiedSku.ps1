@@ -17,12 +17,13 @@ function getUserWithSpecifiedSku($skuPartNumber) {
   # Export user list with specified license
   $userWithSkuList = Get-MsolUser -All | Where-Object { $_.Licenses.AccountSku.SkuPartNumber -eq $skuPartNumber } | Select-Object UserPrincipalName, Licenses
   # Empty hash table to store proccessed data
+  $userAndSku = @()
   foreach ($user in $userWithSkuList) {
     $userpn = $user.UserPrincipalName
     # Get specified sku name (sku name is diffrent to product name)
     $userSpecifiedSku = $user.licenses.accountsku.skupartnumber | Where-Object { $_ -eq $skuPartNumber }
     $hashTableProcData = [PSCustomObject]@{userPN = $userpn; skupartnumber = $userSpecifiedSku }
-    $userAndSku += $hashTableProcData | Format-Table *
+    $userAndSku += $hashTableProcData
   }
   # Process key, value to more friendly name
   return $userAndSku
@@ -32,11 +33,12 @@ function getUserWithSpecifiedSku($skuPartNumber) {
 function provideAvailableLicenseOption() {
   $importAvaLicOption = Import-Csv -Path filesystem::.\skuFriendlyName.csv
   $counter = 0
+  $avaListOption = @()
   # add counter into hash table for UILicenseOption option
   foreach ($option in $importAvaLicOption) {
     $counter ++
     $hashTableProcData = [PSCustomObject]@{counter = $counter; skuPartNumber = $option.skuPartNumber; productName = $option.productName }
-    $avaListOption += $hashTableProcData | Format-Table *
+    $avaListOption += $hashTableProcData
   }
   Return $avaListOption
 }
@@ -45,10 +47,10 @@ function provideAvailableLicenseOption() {
 function getUserSkuProductName($userAndSku, $avaListOption) {
   $userSkuProductName = @()
   foreach ($user in $userAndSku) {
-    $productName = $avaListOption | Where-Object { $user.skupartnumber -eq $skuPartNumber }
+    $productName = $avaListOption | Where-Object { $avaListOption.skuPartNumber -eq $skuPartNumber }
     $productName = $productName | Select-Object productName
     $hashTableProcData = [PSCustomObject]@{userPN = $user.userPN; skuPartNumber = $user.skuPartNumber; productName = $productName }
-    $userSkuProductName += $hashTableProcData | Format-Table *
+    $userSkuProductName += $hashTableProcData
   }
   return $userSkuProductName
 }
