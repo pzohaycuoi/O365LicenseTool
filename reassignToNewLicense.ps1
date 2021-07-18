@@ -28,12 +28,13 @@ function readKey() {
 # Provide license option base on skuFriendlyName.csv
 function provideAvailableLicenseOption() {
   $importAvaLicOption = Import-Csv -Path filesystem::.\skuFriendlyName.csv
-  $avaListOption = @()
   $counter = 0
+  $avaListOption = @()
   # add counter into hash table for UILicenseOption option
   foreach ($option in $importAvaLicOption) {
     $counter ++
-    $avaListOption += New-Object -TypeName psobject -Property @{counter = $counter; skupartnumber = $option.skupartnumber; productName = $option.ProductName }
+    $hashTableProcData = [PSCustomObject]@{counter = $counter; skuPartNumber = $option.skuPartNumber; productName = $option.productName }
+    $avaListOption += $hashTableProcData
   }
   Return $avaListOption
 }
@@ -41,14 +42,15 @@ function provideAvailableLicenseOption() {
 # Export csv file for user with specified sku
 function getUserWithSpecifiedSku($skuPartNumber) {
   # Export user list with specified license
-  $userWithSkuList = Get-MsolUser -All | Where-Object { $_.Licenses.AccountSku.SkuPartNumber -eq $sku } | Select-Object UserPrincipalName, Licenses
+  $userWithSkuList = Get-MsolUser -All | Where-Object { $_.Licenses.AccountSku.SkuPartNumber -eq $skuPartNumber } | Select-Object UserPrincipalName, Licenses
   # Empty hash table to store proccessed data
   $userAndSku = @()
   foreach ($user in $userWithSkuList) {
     $userpn = $user.UserPrincipalName
     # Get specified sku name (sku name is diffrent to product name)
     $userSpecifiedSku = $user.licenses.accountsku.skupartnumber | Where-Object { $_ -eq $skuPartNumber }
-    $userAndSku += New-Object -TypeName psobject -Property @{userPN = $userpn; skupartnumber = $userSpecifiedSku}
+    $hashTableProcData = [PSCustomObject]@{userPN = $userpn; skupartnumber = $userSpecifiedSku }
+    $userAndSku += $hashTableProcData
   }
   # Process key, value to more friendly name
   return $userAndSku
@@ -58,8 +60,9 @@ function getUserWithSpecifiedSku($skuPartNumber) {
 function getUserSkuProductName($userAndSku, $avaListOption) {
   $userSkuProductName = @()
   foreach ($user in $userAndSku) {
-    $productName = $userAndSku | Where-Object {$_.skupartnumber -eq $user.skupartnumber}
-    $userSkuProductName += New-Object -TypeName psobject @{userPN = $user.userPN; skupartnumber = $user.skupartnumber; productName = $productName.productName}
+    $productName = ($avaListOption | Where-Object { $_.skuPartNumber -eq $user.skuPartNumber }).productName
+    $hashTableProcData = [PSCustomObject]@{userPN = $user.userPN; skuPartNumber = $user.skuPartNumber; productName = $productName }
+    $userSkuProductName += $hashTableProcData
   }
   return $userSkuProductName
 }
