@@ -47,8 +47,7 @@ function provideAvailableLicenseOption() {
 function getUserSkuProductName($userAndSku, $avaListOption) {
   $userSkuProductName = @()
   foreach ($user in $userAndSku) {
-    $productName = $avaListOption | Where-Object { $avaListOption.skuPartNumber -eq $skuPartNumber }
-    $productName = $productName | Select-Object productName
+    $productName = ($avaListOption | Where-Object { $_.skuPartNumber -eq $user.skuPartNumber }).productName
     $hashTableProcData = [PSCustomObject]@{userPN = $user.userPN; skuPartNumber = $user.skuPartNumber; productName = $productName }
     $userSkuProductName += $hashTableProcData
   }
@@ -58,5 +57,6 @@ function getUserSkuProductName($userAndSku, $avaListOption) {
 $sku = "MICROSOFT_REMOTE_ASSIST"
 $userAndSku = getUserWithSpecifiedSku $sku
 $avaListOption = provideAvailableLicenseOption
+$avaListOption | Where-Object {$_.skuPartNumber -eq $sku}
 $userSkuProductName = getUserSkuProductName $userAndSku $avaListOption
 $userSkuProductName | Export-Csv filesystem::.\ak.csv -Append -Force -NoTypeInformation
