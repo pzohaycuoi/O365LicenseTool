@@ -103,10 +103,14 @@ function importExportedCsv($fileName) {
 }
 
 # Combine assign with exported list so the action function can be simplifed
-function exportAssPlan($selectedProductAssign, $exportUserWithSpecLic) {
-  $exportedUserWithSpecLic = Import-Csv -Path filesystem::.\$exportUserWithSpecLic
+function exportAssPlan($selectedProductAssign, $exportedUserFile, $importType) {
+  if ("Specify" -eq $importType) {
+    $exportedUserData = Import-Csv -Path filesystem::.\$exportedUserFile
+  } elseif ("csv" -eq $importType) {
+    $exportedUserData = Import-Csv -Path $exportedUserFile
+  }
   $combinedList = @()
-  foreach ($user in $exportedUserWithSpecLic) {
+  foreach ($user in $exportedUserData) {
     $hashTableProcData = [PSCustomObject]@{
       userPN              = $user.userPN
       currentAccountSkuId = $user.accountSkuId
@@ -119,10 +123,14 @@ function exportAssPlan($selectedProductAssign, $exportUserWithSpecLic) {
 }
 
 # Combine Un-assign with exported list so the action function can be simplifed
-function exportUnassPlan($selectedProductUnassign, $exportUserWithSpecLic) {
-  $exportedUserWithSpecLic = Import-Csv -Path filesystem::.\$exportUserWithSpecLic
+function exportUnassPlan($selectedProductUnassign, $exportedUserFile, $importType) {
+  if ("Specify" -eq $importType) {
+    $exportedUserData = Import-Csv -Path filesystem::.\$exportedUserFile
+  } elseif ("csv" -eq $importType) {
+    $exportedUserData = Import-Csv -Path $exportedUserFile
+  }
   $combinedList = @()
-  foreach ($user in $exportedUserWithSpecLic) {
+  foreach ($user in $exportedUserData) {
     $hashTableProcData = [PSCustomObject]@{
       userPN              = $user.userPN
       currentAccountSkuId = $user.accountSkuId
@@ -203,7 +211,6 @@ function UILogin() {
   }
   # Login Succeed
   Write-Host "Login succeed" -ForegroundColor Yellow
-  Start-Sleep -Seconds 3
   Write-Host "Press any key to continue" -ForegroundColor Yellow
   $keyStroke = readKey
 }
@@ -286,10 +293,10 @@ function UIExportUserWithSpecLic($accountSkuId, $avaListOption, $fileName) {
 
 # Export assign plan combined csv #
 #------------------------------------------------------------------------------------------------#
-function UIExportAssCombinedList($selectedProductAssign, $importUserProductExport, $fileName) {
+function UIExportAssCombinedList($selectedProductAssign, $importUserProductExport, $fileName, $importType) {
   Write-Host "Exporting Plan" -ForegroundColor Yellow
   Write-Host "Exporting..."
-  $combinedList = exportAssPlan $selectedProductAssign $importUserProductExport
+  $combinedList = exportAssPlan $selectedProductAssign $importUserProductExport $importType
   $finalFileName = createCsvFile $fileName $selectedProductAssign.productName
   $combinedList | Export-Csv -Path filesystem::.\$finalFileName -Force -Append -NoTypeInformation
   Write-Host "Done Exporting, file name is: "$finalFileName -ForegroundColor Yellow
@@ -304,10 +311,10 @@ function UIExportAssCombinedList($selectedProductAssign, $importUserProductExpor
 
 # Export Uassign plan combined csv #
 #------------------------------------------------------------------------------------------------#
-function UIExportUnassCombinedList($selectedProductUnassign, $importUserProductExport, $fileName) {
+function UIExportUnassCombinedList($selectedProductUnassign, $importUserProductExport, $fileName, $importType) {
   Write-Host "Exporting Plan" -ForegroundColor Yellow
   Write-Host "Exporting..."
-  $combinedList = exportUnassPlan $selectedProductUnassign $importUserProductExport
+  $combinedList = exportUnassPlan $selectedProductUnassign $importUserProductExport $importType
   $finalFileName = createCsvFile $fileName $selectedProductUnassign.productName
   $combinedList | Export-Csv -Path filesystem::.\$finalFileName -Force -Append -NoTypeInformation
   Write-Host "Done Exporting, file name is: "$finalFileName -ForegroundColor Yellow
@@ -352,10 +359,9 @@ function UIUnassignLic($combinedCsv, $avaListOption) {
 function UICsvBrowser() {
   $csvFilePath = fileBrowser
   Write-Host "File path is: "$csvFilePath
-  $csvBrowseData = Import-Csv -Path $csvFilePath
   Write-Host "Press any key to continue" -ForegroundColor Yellow
   $keyStroke = readKey # Don't mind this, added this becasue system console will pipe into previous var => prevent that
-  Return $csvBrowseData
+  Return $csvFilePath
 }
 
 ##################################################################################################
@@ -382,7 +388,7 @@ switch ($choseOption) {
         Clear-Host
         $exportUserWithSpecLic = UIExportUserWithSpecLic $selectedProductExport $avaListOption "assUserWithLicsense"
         Clear-Host
-        $exportPlan = UIExportAssCombinedList $selectedProductAssign $exportUserWithSpecLic "assignPlan"
+        $exportPlan = UIExportAssCombinedList $selectedProductAssign $exportUserWithSpecLic "assignPlan" "Specify"
         Clear-Host
         $importPlan = UIImportCsv $exportPlan
         Write-Host "Assigning: "$selectedProductAssign.productName -ForegroundColor Yellow
@@ -397,9 +403,9 @@ switch ($choseOption) {
         Clear-Host
         Write-Host "Choose csv file to assign license" -ForegroundColor Yellow
         Write-Host "Please choose csv file contains user list to assign license" -ForegroundColor Yellow
-        $csvBrowseData = UICsvBrowser
+        $csvFilePath = UICsvBrowser
         Clear-Host
-        $exportPlan = UIExportAssCombinedList $selectedProductAssign $csvBrowseData "assignPlan"
+        $exportPlan = UIExportAssCombinedList $selectedProductAssign $csvFilePath "assignPlan" "csv"
         Clear-Host
         $importPlan = UIImportCsv $exportPlan
         Write-Host "Assigning: "$selectedProductAssign.productName -ForegroundColor Yellow
@@ -425,7 +431,7 @@ switch ($choseOption) {
         Clear-Host
         $exportUserWithSpecLic = UIExportUserWithSpecLic $selectedProductExport $avaListOption "unAssUserWithLicsense"
         Clear-Host
-        $exportPlan = UIExportUnassCombinedList $selectedProductUnassign $exportUserWithSpecLic "unAssignPlan"
+        $exportPlan = UIExportUnassCombinedList $selectedProductUnassign $exportUserWithSpecLic "unAssignPlan" "Specify"
         Clear-Host
         $importPlan = UIImportCsv $exportPlan
         Write-Host "Un-Assigning: "$selectedProductUnassign.productName -ForegroundColor Yellow
@@ -440,9 +446,9 @@ switch ($choseOption) {
         Clear-Host
         Write-Host "Choose csv file to Un-assign license" -ForegroundColor Yellow
         Write-Host "Please choose csv file contains user list to Un-assign license" -ForegroundColor Yellow
-        $csvBrowseData = UICsvBrowser
+        $csvFilePath = UICsvBrowser
         Clear-Host
-        $exportPlan = UIExportUnassCombinedList $selectedProductUnassign $csvBrowseData "unAssignPlan"
+        $exportPlan = UIExportUnassCombinedList $selectedProductUnassign $csvFilePath "unAssignPlan" "csv"
         Clear-Host
         $importPlan = UIImportCsv $exportPlan
         Write-Host "Un-Assigning: "$selectedProductUnassign.productName -ForegroundColor Yellow
