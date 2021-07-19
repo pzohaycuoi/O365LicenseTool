@@ -153,10 +153,21 @@ function assignLicense($combinedCsv, $avaListOption) {
   }
 }
 
-function unAssignLicense($userPN, $oldLicense) {
-  Set-MsolUserLicense -UserPrincipalName $userPN -RemoveLicenses $oldLicense
+# Un-assign license from user
+function UnssignLicense($combinedCsv, $avaListOption) {
+  foreach ($user in $combinedCsv) {
+    $selectedProductUnassign = $avaListOption | Where-Object { $_.productName -eq $user.UnassignProductName }
+    #  Check if license exsit yet
+    $checkIfExist = (Get-MsolUser -UserPrincipalName $user.userPN).licenses.accountSkuId | Where-Object { $_ -eq $selectedProductUnassign.accountSkuId }
+    if ($null -eq $checkIfExist) {
+      Write-Host $user.userPN" doesn't have license: "$selectedProductUnassign.productName
+      Continue
+    }
+    elseif ($null -ne $checkIfExist) {
+      # Set-MsolUserLicense -UserPrincipalName $user.userPN -RemoveLicenses $selectedProductUnassign.accountSkuId
+    }
+  }
 }
-
 ##################################################################################################
 # Interface #
 ##################################################################################################
@@ -316,6 +327,16 @@ function UIAssignLic($combinedCsv, $avaListOption) {
   $keyStroke = readKey
 }
 
+# Un-Assign license UI #
+#------------------------------------------------------------------------------------------------#
+function UIUnassignLic($combinedCsv, $avaListOption) {
+  Write-Host "Un-Assigning license..."
+  UnssignLicense $combinedCsv $avaListOption
+  Write-Host "Done" -ForegroundColor Yellow
+  $keyStroke = readKey
+}
+
+
 ##################################################################################################
 # ACTION GOES HERE YEY #
 ##################################################################################################
@@ -373,12 +394,12 @@ switch ($choseOption) {
         Clear-Host
         $exportUserWithSpecLic = UIExportUserWithSpecLic $selectedProductExport $avaListOption "userWithLicsense"
         Clear-Host
-        $exportPlan = UIExportUnassCombinedList $selectedProductUnassign $exportUserWithSpecLic "assignPlan"
+        $exportPlan = UIExportUnassCombinedList $selectedProductUnassign $exportUserWithSpecLic "UnassignPlan"
         Clear-Host
         $importPlan = UIImportCsv $exportPlan
         Write-Host "Un-Assigning: "$selectedProductUnassign.productName -ForegroundColor Yellow
         Write-Host "From user with license: "$selectedProductExport.ProductName -ForegroundColor Yellow
-        UIAssignLic $importPlan $avaListOption 
+        UIUnassignLic $importPlan $avaListOption 
       }
       "B" {
         $selectedOption = UILicenseOption $choseOption $avaListOption
