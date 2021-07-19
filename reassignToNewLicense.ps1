@@ -1,6 +1,18 @@
 ##################################################################################################
 # Function #
 ##################################################################################################
+# Make sure get-credential work
+function getCredential() {
+  $getTheCredentials = Get-Credential
+  # Check if getCredential got any info or not
+  if ($?) {
+    return $true
+  }
+  else {
+    return $false
+  }
+  Return $getTheCredentials
+}
 
 # Check login state
 function loginService($logonCredential) {
@@ -109,7 +121,9 @@ function UILogin() {
     do {
       Clear-Host
       Write-Host "Input login information" -ForegroundColor Yellow
-      $logonCredential = Get-Credential
+      do {
+        $logonCredential = Get-Credential
+      } until ($true -eq $logonCredential)
       Write-Host "Connecting to Office 365..."
       $loginStatus = loginService $logonCredential
     } until ($true -eq $loginStatus)
