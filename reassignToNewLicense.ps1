@@ -82,7 +82,7 @@ function getUserSkuProductName($userAndSku, $avaListOption) {
 # Create csv file function
 function createCsvFile($fileName, $productName) {
   # Process file name - add timestamp to file name
-  $fileLogDate = (Get-Date -Format yyyy-mm-dd_HH-mm-ss)
+  $fileLogDate = (Get-Date -Format yy-mm-dd_HH-mm-ss)
   $procedFileName = "$fileName" + "_" + "$productName" + "_" + "$fileLogDate.csv" # csv file name
   # Create csv file for repot
   $finalFileName = (New-Item -Path filesystem::.\ -Name $procedFileName -ItemType "file").Name
@@ -205,17 +205,18 @@ function UILicenseOption($choseOption, $avaListOption) {
     $enteredOption = Read-Host "Input your option: "
   } until ($optionArrary -contains $enteredOption)
   $selectedOption = $avaListOption | Where-Object { $_.counter -eq $enteredOption }
-  $selectedOption
   return $selectedOption
 }
 
 # Export csv UI#
 #------------------------------------------------------------------------------------------------#
 function UIExportUserWithSpecLic($skuPartNumber, $avaListOption, $fileName) {
-  $userAndSku = getUserWithSpecifiedSku $skuPartNumber
+  Clear-Host
+  Write-Host "Exporting...."
+  $userAndSku = getUserWithSpecifiedSku $skuPartNumber.skuPartnumber
   $userSkuProductName = getUserSkuProductName $userAndSku $avaListOption
-  $finalFileName = createCsvFile $fileName $userSkuProductName.productName
-  $userSkuProductName | Export-csv -Path filesystem::.\$finalFileName -Force -NoTypeInformation -Append
+  $finalFileName = createCsvFile $fileName $skuPartNumber.productName
+  $userSkuProductName | Export-Csv -Path filesystem::.\$finalFileName -Force -Append -NoTypeInformation
   return $finalFileName
 }
 
@@ -223,7 +224,7 @@ function UIExportUserWithSpecLic($skuPartNumber, $avaListOption, $fileName) {
 ##################################################################################################
 # ACTION GOES HERE YEY #
 ##################################################################################################
-UILogin
+# UILogin
 $avaListOption = provideAvailableLicenseOption
 $choseOption = UIChoosingOption
 switch ($choseOption) {
@@ -232,7 +233,7 @@ switch ($choseOption) {
     switch ($importFromOption) {
       "A" {
         $selectedOption = UILicenseOption $choseOption $avaListOption
-        $finalFileName = UIExportUserWithSpecLic $selectedOption.skupartnumber $avaListOption "concac"
+        $finalFileName = UIExportUserWithSpecLic $selectedOption $avaListOption "concac"
       }
       "B" {
         $selectedOption = UILicenseOption $choseOption $avaListOption
