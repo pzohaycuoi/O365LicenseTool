@@ -46,9 +46,9 @@ function provideAvailableLicenseOption() {
   foreach ($option in $importAvaLicOption) {
     $counter ++
     $hashTableProcData = [PSCustomObject]@{
-      counter       = $counter
-      skuPartNumber = $option.skuPartNumber
-      productName   = $option.productName 
+      counter      = $counter
+      accountSkuId = $option.accountSkuId
+      productName  = $option.productName 
     }
     $avaListOption += $hashTableProcData
   }
@@ -56,18 +56,18 @@ function provideAvailableLicenseOption() {
 }
 
 # Export csv file for user with specified sku
-function getUserWithSpecifiedSku($skuPartNumber) {
+function getUserWithSpecifiedSku($accountSkuId) {
   # Export user list with specified license
-  $userWithSkuList = Get-MsolUser -All | Where-Object { $_.Licenses.AccountSku.SkuPartNumber -eq $skuPartNumber } | Select-Object UserPrincipalName, Licenses
+  $userWithSkuList = Get-MsolUser -All | Where-Object { $_.Licenses.AccountSkuId -eq $accountSkuId } | Select-Object UserPrincipalName, Licenses
   # Empty hash table to store proccessed data
   $userAndSku = @()
   foreach ($user in $userWithSkuList) {
     $userpn = $user.UserPrincipalName
     # Get specified sku name (sku name is diffrent to product name)
-    $userSpecifiedSku = $user.licenses.accountsku.skupartnumber | Where-Object { $_ -eq $skuPartNumber }
+    $userSpecifiedSku = $user.licenses.accountSkuId | Where-Object { $_ -eq $accountSkuId }
     $hashTableProcData = [PSCustomObject]@{
-      userPN        = $userpn
-      skupartnumber = $userSpecifiedSku 
+      userPN       = $userpn
+      accountSkuId = $userSpecifiedSku 
     }
     $userAndSku += $hashTableProcData
   }
@@ -79,11 +79,11 @@ function getUserWithSpecifiedSku($skuPartNumber) {
 function getUserSkuProductName($userAndSku, $avaListOption) {
   $userSkuProductName = @()
   foreach ($user in $userAndSku) {
-    $productName = ($avaListOption | Where-Object { $_.skuPartNumber -eq $user.skuPartNumber }).productName
+    $productName = ($avaListOption | Where-Object { $_.accountSkuId -eq $user.accountSkuId }).productName
     $hashTableProcData = [PSCustomObject]@{
-      userPN        = $user.userPN
-      skuPartNumber = $user.skuPartNumber
-      productName   = $productName 
+      userPN       = $user.userPN
+      accountSkuId = $user.accountSkuId
+      productName  = $productName 
     }
     $userSkuProductName += $hashTableProcData
   }
@@ -111,10 +111,10 @@ function exportAssPlan($selectedProductAssign, $exportUserWithSpecLic) {
   $combinedList = @()
   foreach ($user in $exportedUserWithSpecLic) {
     $hashTableProcData = [PSCustomObject]@{
-      userPN               = $user.userPN
-      currentSkuPartNumber = $user.skuPartNumber
-      currentProductName   = $user.productName
-      AssignProductName    = $selectedProductAssign.productName
+      userPN              = $user.userPN
+      currentAccountSkuId = $user.accountSkuId
+      currentProductName  = $user.productName
+      AssignProductName   = $selectedProductAssign.productName
     }
     $combinedList += $hashTableProcData
   }
@@ -127,10 +127,10 @@ function exportUnassPlan($selectedProductUnassign, $exportUserWithSpecLic) {
   $combinedList = @()
   foreach ($user in $exportedUserWithSpecLic) {
     $hashTableProcData = [PSCustomObject]@{
-      userPN               = $user.userPN
-      currentSkuPartNumber = $user.skuPartNumber
-      currentProductName   = $user.productName
-      UnAssignProductName    = $selectedProductUnassign.productName
+      userPN              = $user.userPN
+      currentAccountSkuId = $user.accountSkuId
+      currentProductName  = $user.productName
+      UnAssignProductName = $selectedProductUnassign.productName
     }
     $combinedList += $hashTableProcData
   }
@@ -140,11 +140,11 @@ function exportUnassPlan($selectedProductUnassign, $exportUserWithSpecLic) {
 # Assign license to user
 function assignLicense($combinedCsv, $avaListOption) {
   foreach ($user in $combinedCsv) {
-    # Check if license exsit yet
     $selectedProductAssign = $avaListOption | Where-Object { $_.productName -eq $user.AssignProductName }
-    $checkIfExist = (Get-MsolUser -UserPrincipalName $user.userPN).licenses.accountSku.skuPartNumber | Where-Object { $_ -eq $selectedProductAssign.skuPartNumber }
+    #  Check if license exsit yet
+    $checkIfExist = (Get-MsolUser -UserPrincipalName $user.userPN).licenses.accountSkuId | Where-Object { $_ -eq $selectedProductAssign.accountSkuId }
     if ($null -eq $checkIfExist) {
-      # Set-MsolUserLicense -UserPrincipalName $user.userPN -AddLicenses
+      # Set-MsolUserLicense -UserPrincipalName $user.userPN -AddLicenses $selectedProductAssign.accountSkuId
     }
     elseif ($null -ne $checkIfExist) {
       Write-Host $user.userPN" already have license: "$selectedProductAssign.productName
@@ -249,12 +249,12 @@ function UILicenseOption($choseOption, $avaListOption) {
 
 # Export csv UI#
 #------------------------------------------------------------------------------------------------#
-function UIExportUserWithSpecLic($skuPartNumber, $avaListOption, $fileName) {
+function UIExportUserWithSpecLic($accountSkuId, $avaListOption, $fileName) {
   Write-Host "Export user with License: "$skuPartNumber.productName -ForegroundColor Yellow
   Write-Host "Exporting...."
-  $userAndSku = getUserWithSpecifiedSku $skuPartNumber.skuPartnumber
+  $userAndSku = getUserWithSpecifiedSku $accountSkuId.accountSkuId
   $userSkuProductName = getUserSkuProductName $userAndSku $avaListOption
-  $finalFileName = createCsvFile $fileName $skuPartNumber.productName
+  $finalFileName = createCsvFile $fileName $accountSkuId.productName
   $userSkuProductName | Export-Csv -Path filesystem::.\$finalFileName -Force -Append -NoTypeInformation
   Write-Host "Done Exporting, file name is: "$finalFilename -ForegroundColor Yellow
   Write-Host "Press any key to continue" -ForegroundColor Yellow
@@ -311,8 +311,9 @@ function UIImportCsv($csvFile) {
 #------------------------------------------------------------------------------------------------#
 function UIAssignLic($combinedCsv, $avaListOption) {
   Write-Host "Assigning license..."
-  assignLicense $combinedCsv $combinedCsv
-  Write-Host "Done dit me may"
+  assignLicense $combinedCsv $avaListOption
+  Write-Host "Done" -ForegroundColor Yellow
+  $keyStroke = readKey
 }
 
 ##################################################################################################
