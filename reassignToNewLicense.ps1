@@ -153,7 +153,7 @@ function assignLicense($combinedCsv, $avaListOption) {
     $checkIfExist = (Get-MsolUser -UserPrincipalName $user.userPN).licenses.accountSkuId | Where-Object { $_ -eq $selectedProductAssign.accountSkuId }
     if ($null -eq $checkIfExist) {
       Write-Host "Assigning user: "$user.userPN"License: "$selectedProductAssign.productName
-      # Set-MsolUserLicense -UserPrincipalName $user.userPN -AddLicenses $selectedProductAssign.accountSkuId
+      Set-MsolUserLicense -UserPrincipalName $user.userPN -AddLicenses $selectedProductAssign.accountSkuId
     }
     elseif ($null -ne $checkIfExist) {
       Write-Host $user.userPN" already have license: "$selectedProductAssign.productName
@@ -172,7 +172,7 @@ function assignLicense($combinedCsv, $avaListOption) {
 }
 
 # Un-assign license from user
-function UnssignLicense($combinedCsv, $avaListOption) {
+function unAssignLicense($combinedCsv, $avaListOption) {
   $resultYey = @()
   foreach ($user in $combinedCsv) {
     $selectedProductUnassign = $avaListOption | Where-Object { $_.productName -eq $user.UnassignProductName }
@@ -184,11 +184,16 @@ function UnssignLicense($combinedCsv, $avaListOption) {
     }
     elseif ($null -ne $checkIfExist) {
       Write-Host "Un-assigning user: "$user.userPN" License: "$selectedProductUnassign.productName
-      # Set-MsolUserLicense -UserPrincipalName $user.userPN -RemoveLicenses $selectedProductUnassign.accountSkuId
+      Set-MsolUserLicense -UserPrincipalName $user.userPN -RemoveLicenses $selectedProductUnassign.accountSkuId
     }
     # Re-check and output to result
     $unAssignResultSku = (Get-MsolUser -UserPrincipalName $user.userPN).licenses.accountSkuId | Where-Object { $_ -eq $selectedProductAssign.accountSkuId }
-    $unAssignResultProduct = ($avaListOption | Where-Object { $_.productName -eq $unAssignResultSku }).productName
+    if ($null -eq $unAssignResultSku) {
+      $unAssignResultProduct = "Unassigned"
+    }
+    else {
+      $unAssignResultProduct = ($avaListOption | Where-Object { $_.productName -eq $unAssignResultSku }).productName
+    }
     $hashTableProcData = [PSCustomObject]@{
       UserPN                = $user.userPN
       UnAssignedProductName = $unAssignResultProduct
@@ -379,7 +384,7 @@ function UIUnassignLic($selectedProductUnassign, $combinedCsv, $avaListOption, $
   $finalFileName = createCsvFile $fileName $selectedProductUnassign 
   Write-Host "Created file: "$finalFileName -ForegroundColor Yellow
   Write-Host "Un-Assigning license..."
-  $unAssignResult = UnssignLicense $combinedCsv $avaListOption
+  $unAssignResult = unAssignLicense $combinedCsv $avaListOption
   $unAssignResult | Export-Csv -Path filesystem::.\$finalFileName -Force -NoTypeInformation -Append
   Write-Host "Please check file "$finalFileName" for result" -ForegroundColor Yellow
   Write-Host "Done" -ForegroundColor Yellow
