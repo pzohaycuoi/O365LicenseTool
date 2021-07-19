@@ -27,10 +27,7 @@ function loginService($logonCredential) {
   }
 }
 
-function makeSureGetCredentialWork() {
-
-}
-
+# Read key press by user
 function readKey() {
   $keyStroke = [System.Console]::ReadKey($true)
   $keyStroke = ($keyStroke).key
@@ -144,6 +141,7 @@ function assignLicense($combinedCsv, $avaListOption) {
     #  Check if license exsit yet
     $checkIfExist = (Get-MsolUser -UserPrincipalName $user.userPN).licenses.accountSkuId | Where-Object { $_ -eq $selectedProductAssign.accountSkuId }
     if ($null -eq $checkIfExist) {
+      Write-Host "Assigning user: "$user.userPN"License: "$selectedProductAssign.productName
       # Set-MsolUserLicense -UserPrincipalName $user.userPN -AddLicenses $selectedProductAssign.accountSkuId
     }
     elseif ($null -ne $checkIfExist) {
@@ -164,10 +162,24 @@ function UnssignLicense($combinedCsv, $avaListOption) {
       Continue
     }
     elseif ($null -ne $checkIfExist) {
+      Write-Host "Un-assigning user: "$user.userPN" License: "$selectedProductUnassign.productName
       # Set-MsolUserLicense -UserPrincipalName $user.userPN -RemoveLicenses $selectedProductUnassign.accountSkuId
     }
   }
 }
+
+# File broswer function
+function fileBrowser() {
+  do {
+    Add-Type -AssemblyName System.Windows.Forms
+    $FileBrowser = New-Object System.Windows.Forms.OpenFileDialog
+    $FileBrowser.filter = "Csv (*.csv)| *.csv"
+    [void]$FileBrowser.ShowDialog()
+    $filePath = $FileBrowser.FileName
+  } until ("" -ne $filePath)
+  Return $filePath
+}
+
 ##################################################################################################
 # Interface #
 ##################################################################################################
@@ -176,7 +188,7 @@ function UnssignLicense($combinedCsv, $avaListOption) {
 #------------------------------------------------------------------------------------------------#
 function UILogin() {
   Write-Host "Press any key to Login" -ForegroundColor Yellow
-  $keyStroke = readKey
+  $keyStroke = readKey # Don't mind this, added this becasue system console will pipe into previous var => prevent that
   # Login Office 365
   if ($null -eq $logonCredential) {
     do {
@@ -199,13 +211,12 @@ function UILogin() {
 # Choose option UI #
 #------------------------------------------------------------------------------------------------#
 function UIChoosingOption() {
-  $optionArrary = @("A", "B", "C")
+  $optionArrary = @("A", "B")
   do {
     Clear-Host
     Write-Host "Please choose option" -ForegroundColor Yellow
     Write-Host "A: Assign License"
     Write-Host "B: Un-assign License"
-    Write-Host "C: Assign and Un-assign License"
     Write-Host -NoNewline "Input your option: "
     $keyStroke = readKey
     Start-Sleep -Seconds 1
@@ -324,7 +335,7 @@ function UIAssignLic($combinedCsv, $avaListOption) {
   Write-Host "Assigning license..."
   assignLicense $combinedCsv $avaListOption
   Write-Host "Done" -ForegroundColor Yellow
-  $keyStroke = readKey
+  $keyStroke = readKey # Don't mind this, added this becasue system console will pipe into previous var => prevent that
 }
 
 # Un-Assign license UI #
@@ -333,14 +344,24 @@ function UIUnassignLic($combinedCsv, $avaListOption) {
   Write-Host "Un-Assigning license..."
   UnssignLicense $combinedCsv $avaListOption
   Write-Host "Done" -ForegroundColor Yellow
-  $keyStroke = readKey
+  $keyStroke = readKey # Don't mind this, added this becasue system console will pipe into previous var => prevent that
 }
 
+# Csv file browser UI #
+#------------------------------------------------------------------------------------------------#
+function UICsvBrowser() {
+  $csvFilePath = fileBrowser
+  Write-Host "File path is: "$csvFilePath
+  $csvBrowseData = Import-Csv -Path $csvFilePath
+  Write-Host "Press any key to continue" -ForegroundColor Yellow
+  $keyStroke = readKey # Don't mind this, added this becasue system console will pipe into previous var => prevent that
+  Return $csvBrowseData
+}
 
 ##################################################################################################
 # ACTION GOES HERE YEY #
 ##################################################################################################
-# UILogin
+UILogin
 $avaListOption = provideAvailableLicenseOption
 $choseOption = UIChoosingOption
 switch ($choseOption) {
@@ -359,7 +380,7 @@ switch ($choseOption) {
         Write-Host "Please choose product to export list of user with the license" -ForegroundColor Yellow
         $selectedProductExport = UILicenseOption $choseOption $avaListOption
         Clear-Host
-        $exportUserWithSpecLic = UIExportUserWithSpecLic $selectedProductExport $avaListOption "userWithLicsense"
+        $exportUserWithSpecLic = UIExportUserWithSpecLic $selectedProductExport $avaListOption "assUserWithLicsense"
         Clear-Host
         $exportPlan = UIExportAssCombinedList $selectedProductAssign $exportUserWithSpecLic "assignPlan"
         Clear-Host
@@ -371,9 +392,19 @@ switch ($choseOption) {
       "B" {
         Clear-Host
         Write-Host "Assign license to user from csv file" -ForegroundColor Yellow
-        
         Write-Host "Please choose product to assign" -ForegroundColor Yellow
-        $selectedOption = UILicenseOption $choseOption $avaListOption
+        $selectedProductAssign = UILicenseOption $choseOption $avaListOption
+        Clear-Host
+        Write-Host "Choose csv file to assign license" -ForegroundColor Yellow
+        Write-Host "Please choose csv file contains user list to assign license" -ForegroundColor Yellow
+        $csvBrowseData = UICsvBrowser
+        Clear-Host
+        $exportPlan = UIExportAssCombinedList $selectedProductAssign $csvBrowseData "assignPlan"
+        Clear-Host
+        $importPlan = UIImportCsv $exportPlan
+        Write-Host "Assigning: "$selectedProductAssign.productName -ForegroundColor Yellow
+        Write-Host "To user with license: "$selectedProductExport.ProductName -ForegroundColor Yellow
+        UIAssignLic $importPlan $avaListOption 
       }
     }
   }
@@ -392,9 +423,9 @@ switch ($choseOption) {
         Write-Host "Please choose product to export list of user with the license" -ForegroundColor Yellow
         $selectedProductExport = UILicenseOption $choseOption $avaListOption
         Clear-Host
-        $exportUserWithSpecLic = UIExportUserWithSpecLic $selectedProductExport $avaListOption "userWithLicsense"
+        $exportUserWithSpecLic = UIExportUserWithSpecLic $selectedProductExport $avaListOption "unAssUserWithLicsense"
         Clear-Host
-        $exportPlan = UIExportUnassCombinedList $selectedProductUnassign $exportUserWithSpecLic "UnassignPlan"
+        $exportPlan = UIExportUnassCombinedList $selectedProductUnassign $exportUserWithSpecLic "unAssignPlan"
         Clear-Host
         $importPlan = UIImportCsv $exportPlan
         Write-Host "Un-Assigning: "$selectedProductUnassign.productName -ForegroundColor Yellow
@@ -402,12 +433,22 @@ switch ($choseOption) {
         UIUnassignLic $importPlan $avaListOption 
       }
       "B" {
-        $selectedOption = UILicenseOption $choseOption $avaListOption
+        Clear-Host
+        Write-Host "Un-Assign license to user with specific license" -ForegroundColor Yellow
+        Write-Host "Please choose product to Un-assign" -ForegroundColor Yellow
+        $selectedProductUnassign = UILicenseOption $choseOption $avaListOption
+        Clear-Host
+        Write-Host "Choose csv file to Un-assign license" -ForegroundColor Yellow
+        Write-Host "Please choose csv file contains user list to Un-assign license" -ForegroundColor Yellow
+        $csvBrowseData = UICsvBrowser
+        Clear-Host
+        $exportPlan = UIExportUnassCombinedList $selectedProductUnassign $csvBrowseData "unAssignPlan"
+        Clear-Host
+        $importPlan = UIImportCsv $exportPlan
+        Write-Host "Un-Assigning: "$selectedProductUnassign.productName -ForegroundColor Yellow
+        Write-Host "From user with license: "$selectedProductExport.ProductName -ForegroundColor Yellow
+        UIUnassignLic $importPlan $avaListOption 
       }
     }
-  }
-  "C" {
-    Clear-Host
-    Write-Host "Assign and Un-assign Licsense" -ForegroundColor Yellow
   }
 }
