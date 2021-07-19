@@ -91,7 +91,7 @@ function createCsvFile($fileName, $productName) {
 
 function importExportedCsv($finalFileName) {
   $importExpCsv = Import-csv -Path filesystem::.\$finalFileName
-  Write-Host "Completed importing file: "+ $finalFileName
+  Write-Host "Completed importing file: "$finalFileName
   return $importExpCsv
 }
 
@@ -201,15 +201,14 @@ function UILicenseOption($choseOption, $avaListOption) {
 # Export csv UI#
 #------------------------------------------------------------------------------------------------#
 function UIExportUserWithSpecLic($skuPartNumber, $avaListOption, $fileName) {
-  Write-Host "Export user with License: " + "$skuPartNumber.productName"
+  Write-Host "Export user with License: "$skuPartNumber.productName -ForegroundColor Yellow
   Write-Host "Exporting...."
   $userAndSku = getUserWithSpecifiedSku $skuPartNumber.skuPartnumber
   $userSkuProductName = getUserSkuProductName $userAndSku $avaListOption
   $finalFileName = createCsvFile $fileName $skuPartNumber.productName
   $userSkuProductName | Export-Csv -Path filesystem::.\$finalFileName -Force -Append -NoTypeInformation
-  Write-Host "Done Exporting, file name is: " + "$finalFilename"
-  Write-Host "Press any button to continue"
-  [System.Console]::ReadKey($true)
+  Write-Host "Done Exporting, file name is: "$finalFilename -ForegroundColor Yellow
+  Write-Host "Press any button to continue" -ForegroundColor Yellow
   return $finalFileName
 }
 
@@ -240,11 +239,13 @@ switch ($choseOption) {
         Write-Host "Choose user with specific license to assign to" -ForegroundColor Yellow
         Write-Host "Please choose product to export list of user with the license"
         $selectedProductExport = UILicenseOption $choseOption $avaListOption
-        $finalFileName = UIExportUserWithSpecLic $selectedProductExport $avaListOption "userWithLicsense"
         Clear-Host
-        Write-Host "Importing csv file: " + $finalFileName
+        $finalFileName = UIExportUserWithSpecLic $selectedProductExport $avaListOption "userWithLicsense"
+        [System.Console]::ReadKey($true)
+        Clear-Host
+        Write-Host "Importing csv file: "$finalFileName -ForegroundColor Yellow
         $importUserProductExport = importExportedCsv $finalFileName
-        Write-Host "Assigning " + $selectedProductAssign.productName + " to user with license: " + $selectedProductExport.ProductName
+        Write-Host "Assigning: "$selectedProductAssign.productName" - to user with license: "$selectedProductExport.ProductName -ForegroundColor Yellow
       }
       "B" {
         Clear-Host
