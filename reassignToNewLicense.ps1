@@ -45,7 +45,10 @@ function provideAvailableLicenseOption() {
   # add counter into hash table for UILicenseOption option
   foreach ($option in $importAvaLicOption) {
     $counter ++
-    $hashTableProcData = [PSCustomObject]@{counter = $counter; skuPartNumber = $option.skuPartNumber; productName = $option.productName }
+    $hashTableProcData = [PSCustomObject]@{
+      counter = $counter
+      skuPartNumber = $option.skuPartNumber
+      productName = $option.productName }
     $avaListOption += $hashTableProcData
   }
   Return $avaListOption
@@ -61,7 +64,10 @@ function getUserWithSpecifiedSku($skuPartNumber) {
     $userpn = $user.UserPrincipalName
     # Get specified sku name (sku name is diffrent to product name)
     $userSpecifiedSku = $user.licenses.accountsku.skupartnumber | Where-Object { $_ -eq $skuPartNumber }
-    $hashTableProcData = [PSCustomObject]@{userPN = $userpn; skupartnumber = $userSpecifiedSku }
+    $hashTableProcData = [PSCustomObject]@{
+      userPN = $userpn
+      skupartnumber = $userSpecifiedSku 
+    }
     $userAndSku += $hashTableProcData
   }
   # Process key, value to more friendly name
@@ -73,7 +79,11 @@ function getUserSkuProductName($userAndSku, $avaListOption) {
   $userSkuProductName = @()
   foreach ($user in $userAndSku) {
     $productName = ($avaListOption | Where-Object { $_.skuPartNumber -eq $user.skuPartNumber }).productName
-    $hashTableProcData = [PSCustomObject]@{userPN = $user.userPN; skuPartNumber = $user.skuPartNumber; productName = $productName }
+    $hashTableProcData = [PSCustomObject]@{
+      userPN = $user.userPN
+      skuPartNumber = $user.skuPartNumber
+      productName = $productName 
+    }
     $userSkuProductName += $hashTableProcData
   }
   return $userSkuProductName
@@ -89,19 +99,35 @@ function createCsvFile($fileName, $productName) {
   Return $finalFileName
 }
 
-function importExportedCsv($finalFileName) {
-  $importExpCsv = Import-csv -Path filesystem::.\$finalFileName
-  Write-Host "Completed importing file: "$finalFileName
+function importExportedCsv($fileName) {
+  $importExpCsv = Import-csv -Path filesystem::.\$fileName
+  Write-Host "Completed importing file: "$fileName
   return $importExpCsv
 }
 
-# Check if sku already exist
-function checkIfExist($userPN, $licenseOptions) {
-  
+# Combine assign and unassign with exported list so the action function can be simplifed
+function exportAssPlan($selectedProductAssign, $exportUserWithSpecLic) {
+  $exportedUserWithSpecLic = Import-Csv -Path filesystem::.\$exportUserWithSpecLic
+  $combinedList = @()
+  foreach ($user in $exportedUserWithSpecLic) {
+    $hashTableProcData = [PSCustomObject]@{
+      userPN = $user.userPN
+      currentSkuPartNumber = $user.skuPartNumber
+      currentProductName = $user.productName
+      AssignProductName = $selectedProductAssign.productName
+    }
+    $combinedList += $hashTableProcData
+  }
+  Return $combinedList
 }
 
-function assignLicense($userPN, $newLicense) {
-  Set-MsolUserLicense -UserPrincipalName $userPN -AddLicenses $newLicense
+# Assign license to user
+function assignLicense($combinedCsv, $avaListOption) {
+  foreach ($user in $combinedCsv) {
+    # Check if license exsit yet
+    $selectedProductAssign = ($avaListOption | Where-Object { $_ -eq $user.AssignProductName}).skuPartNumber
+    $checkCurLic = (Get-MsolUser -UserPrincipalName $user.userPN).licenses.accountSku.skuPartNumber | Where-Object {$_ -eq $selectedProductAssign}
+  }
 }
 
 function unAssignLicense($userPN, $oldLicense) {
@@ -115,7 +141,7 @@ function unAssignLicense($userPN, $oldLicense) {
 # Login UI #
 #------------------------------------------------------------------------------------------------#
 function UILogin() {
-  Write-Host "Press any button to Login" -ForegroundColor Yellow
+  Write-Host "Press any key to Login" -ForegroundColor Yellow
   [System.Console]::ReadKey($true)
   # Login Office 365
   if ($null -eq $logonCredential) {
@@ -132,8 +158,8 @@ function UILogin() {
   # Login Succeed
   Write-Host "Login succeed" -ForegroundColor Yellow
   Start-Sleep -Seconds 3
-  Write-Host "Press any button to continue" -ForegroundColor Yellow
-  [System.Console]::ReadKey($true)
+  Write-Host "Press any key to continue" -ForegroundColor Yellow
+  $keyStroke = readKey
 }
 
 # Choose option UI #
@@ -208,14 +234,26 @@ function UIExportUserWithSpecLic($skuPartNumber, $avaListOption, $fileName) {
   $finalFileName = createCsvFile $fileName $skuPartNumber.productName
   $userSkuProductName | Export-Csv -Path filesystem::.\$finalFileName -Force -Append -NoTypeInformation
   Write-Host "Done Exporting, file name is: "$finalFilename -ForegroundColor Yellow
-  Write-Host "Press any button to continue" -ForegroundColor Yellow
+  Write-Host "Press any key to continue" -ForegroundColor Yellow
+  $keyStroke = readKey # Don't mind this, added this becasue system console will pipe into previous var => prevent that
   return $finalFileName
 }
 
-# Assign Lic from csv file UI#
+# clgt #
 #------------------------------------------------------------------------------------------------#
-function UIAssignLicFromCsv() {
-  
+function UIExportCombinedList($selectedProductAssign, $importUserProductExport, $fileName) {
+  Write-Host "Exporting Plan" -ForegroundColor Yellow
+  Write-Host "Exporting..."
+  $combinedList = assAndUnassPlan $selectedProductAssign $importUserProductExport
+  $finalFileName = createCsvFile $fileName $selectedProductExport.productName
+  $combinedList | Export-Csv -Path filesystem::.\$finalFileName -Force -Append -NoTypeInformation
+  Write-Host "Done Exporting, file name is: "$finalFileName -ForegroundColor Yellow
+  Write-Host "Please review the plan first" -ForegroundColor Yellow
+  do {
+    $keyStroke = readKey
+    Write-Host "Press ""Y"" to continue" -ForegroundColor Yellow
+  } until ("y" -eq $keyStroke)
+  return $finalFileName
 }
 
 ##################################################################################################
@@ -240,11 +278,12 @@ switch ($choseOption) {
         Write-Host "Please choose product to export list of user with the license"
         $selectedProductExport = UILicenseOption $choseOption $avaListOption
         Clear-Host
-        $finalFileName = UIExportUserWithSpecLic $selectedProductExport $avaListOption "userWithLicsense"
-        [System.Console]::ReadKey($true)
+        $exportUserWithSpecLic = UIExportUserWithSpecLic $selectedProductAssign $avaListOption "userWithLicsense"
         Clear-Host
-        Write-Host "Importing csv file: "$finalFileName -ForegroundColor Yellow
-        $importUserProductExport = importExportedCsv $finalFileName
+        $exportPlan = UIExportCombinedList $selectedProductExport $exportUserWithSpecLic "assignPlan"
+        Clear-Host
+        Write-Host "Importing csv file: "$exportPlan -ForegroundColor Yellow
+        $importUserProductExport = importExportedCsv $exportPlan
         Write-Host "Assigning: "$selectedProductAssign.productName" - to user with license: "$selectedProductExport.ProductName -ForegroundColor Yellow
       }
       "B" {
@@ -262,8 +301,22 @@ switch ($choseOption) {
     $importFromOption = UIAssignUnassignLicense $choseOption
     switch ($importFromOption) {
       "A" {
-        
-        $selectedOption = UILicenseOption $choseOption $avaListOption
+        Clear-Host
+        Write-Host "Un-assign license to user with specific license" -ForegroundColor Yellow
+        Write-Host "Please choose product to Un-assign" -ForegroundColor Yellow
+        $selectedProductAssign = UILicenseOption $choseOption $avaListOption
+        Clear-Host
+        Write-Host "Choose user with specific license to Un-assign to" -ForegroundColor Yellow
+        Write-Host "Please choose product to export list of user with the license"
+        $selectedProductExport = UILicenseOption $choseOption $avaListOption
+        Clear-Host
+        $exportUserWithSpecLic = UIExportUserWithSpecLic $selectedProductAssign $avaListOption "userWithLicsense"
+        Clear-Host
+        $exportPlan = UIExportCombinedList $selectedProductExport $exportUserWithSpecLic "unassignPlan"
+        Clear-Host
+        Write-Host "Importing csv file: "$exportPlan -ForegroundColor Yellow
+        $importUserProductExport = importExportedCsv $exportPlan
+        Write-Host "Un-assigning: "$selectedProductAssign.productName" - to user with license: "$selectedProductExport.ProductName -ForegroundColor Yellow
       }
       "B" {
         $selectedOption = UILicenseOption $choseOption $avaListOption
