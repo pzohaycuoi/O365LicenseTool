@@ -153,7 +153,7 @@ function assignLicense($combinedCsv, $avaListOption) {
     $checkIfExist = (Get-MsolUser -UserPrincipalName $user.userPN).licenses.accountSkuId | Where-Object { $_ -eq $selectedProductAssign.accountSkuId }
     if ($null -eq $checkIfExist) {
       Write-Host "Assigning user: "$user.userPN"License: "$selectedProductAssign.productName
-      # Set-MsolUserLicense -UserPrincipalName $user.userPN -AddLicenses $selectedProductAssign.accountSkuId
+      Set-MsolUserLicense -UserPrincipalName $user.userPN -AddLicenses $selectedProductAssign.accountSkuId
     }
     elseif ($null -ne $checkIfExist) {
       Write-Host $user.userPN" already have license: "$selectedProductAssign.productName
@@ -184,7 +184,7 @@ function unAssignLicense($combinedCsv, $avaListOption) {
     }
     elseif ($null -ne $checkIfExist) {
       Write-Host "Un-assigning user: "$user.userPN" License: "$selectedProductUnassign.productName
-      # Set-MsolUserLicense -UserPrincipalName $user.userPN -RemoveLicenses $selectedProductUnassign.accountSkuId
+      Set-MsolUserLicense -UserPrincipalName $user.userPN -RemoveLicenses $selectedProductUnassign.accountSkuId 
     }
     # Re-check and output to result
     $unAssignResultSku = (Get-MsolUser -UserPrincipalName $user.userPN).licenses.accountSkuId | Where-Object { $_ -eq $selectedProductAssign.accountSkuId }
@@ -507,13 +507,13 @@ $UnAssignLicenseToSpecLic = {
 
 $UnAssignLicenseFromCsv = {
   Clear-Host
-  Write-Host "Un-Assign license to user with specific license" -ForegroundColor Yellow
+  Write-Host "Un-Assign license from user from csv file" -ForegroundColor Yellow
   Write-Host "Please choose product to Un-assign" -ForegroundColor Yellow
   $selectedProductUnassign = UILicenseOption $choseOption $avaListOption
   Clear-Host
   Write-Host "Choose csv file to Un-assign license" -ForegroundColor Yellow
   Write-Host "Please choose csv file contains user list to Un-assign license" -ForegroundColor Yellow
-  $csvFilePath = UICsvBrowse
+  $csvFilePath = UICsvBrowser
   Clear-Host
   $exportPlan = UIExportUnassCombinedList $selectedProductUnassign $csvFilePath "unAssignPlan" "csv"
   Clear-Host
