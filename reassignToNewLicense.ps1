@@ -153,7 +153,7 @@ function assignLicense($combinedCsv, $avaListOption) {
     $checkIfExist = (Get-MsolUser -UserPrincipalName $user.userPN).licenses.accountSkuId | Where-Object { $_ -eq $selectedProductAssign.accountSkuId }
     if ($null -eq $checkIfExist) {
       Write-Host "Assigning user: "$user.userPN"License: "$selectedProductAssign.productName
-      Set-MsolUserLicense -UserPrincipalName $user.userPN -AddLicenses $selectedProductAssign.accountSkuId
+      # Set-MsolUserLicense -UserPrincipalName $user.userPN -AddLicenses $selectedProductAssign.accountSkuId
     }
     elseif ($null -ne $checkIfExist) {
       Write-Host $user.userPN" already have license: "$selectedProductAssign.productName
@@ -184,7 +184,7 @@ function unAssignLicense($combinedCsv, $avaListOption) {
     }
     elseif ($null -ne $checkIfExist) {
       Write-Host "Un-assigning user: "$user.userPN" License: "$selectedProductUnassign.productName
-      Set-MsolUserLicense -UserPrincipalName $user.userPN -RemoveLicenses $selectedProductUnassign.accountSkuId
+      # Set-MsolUserLicense -UserPrincipalName $user.userPN -RemoveLicenses $selectedProductUnassign.accountSkuId
     }
     # Re-check and output to result
     $unAssignResultSku = (Get-MsolUser -UserPrincipalName $user.userPN).licenses.accountSkuId | Where-Object { $_ -eq $selectedProductAssign.accountSkuId }
@@ -237,24 +237,24 @@ function UILogin() {
     } until ($true -eq $loginStatus)
   }
   # Login Succeed
-  Start-Sleep -Seconds 5
   Write-Host "Login succeed" -ForegroundColor Yellow
-  Write-Host "Press any key to continue" -ForegroundColor Yellow
-  $keyStroke = readKey
+  Start-Sleep -Seconds 3
+  Write-Host "Press Enter to continue" -ForegroundColor Yellow
+  Read-Host
 }
 
 # Choose option UI #
 #------------------------------------------------------------------------------------------------#
 function UIChoosingOption() {
-  $optionArrary = @("A", "B")
+  $optionArrary = @("A", "B", "Q")
   do {
     Clear-Host
     Write-Host "Please choose option" -ForegroundColor Yellow
     Write-Host "A: Assign License"
     Write-Host "B: Un-assign License"
-    Write-Host -NoNewline "Input your option: "
-    $keyStroke = readKey
-    Start-Sleep -Seconds 1
+    Write-Host "Q: To quit"
+    Write-Host -NoNewline "Input your option and press Enter: "
+    $keyStroke = Read-Host
   } until ($optionArrary -contains $keyStroke)
   Return $keyStroke
 }
@@ -268,8 +268,8 @@ function UIAssignUnassignLicense($UIOption) {
       Write-Host "Please choose option" -ForegroundColor Yellow
       Write-Host "A: Assign license to user with specific license"
       Write-Host "B: Assign license to user from csv file"
-      Write-Host -NoNewline "Input your option: "
-      $keyStroke = readKey
+      Write-Host -NoNewline "Input your option and press Enter: "
+      $keyStroke = Read-Host
     } until ($optionArrary -contains $keyStroke)
     Return $keyStroke
   }
@@ -279,8 +279,8 @@ function UIAssignUnassignLicense($UIOption) {
       Write-Host "Please choose option" -ForegroundColor Yellow
       Write-Host "A: Un-assign license from user with specific license"
       Write-Host "B: Un-assign license from user from csv file"
-      Write-Host -NoNewline "Input your option: "
-      $keyStroke = readKey
+      Write-Host -NoNewline "Input your option and press Enter: "
+      $keyStroke = Read-Host
     } until ($optionArrary -contains $keyStroke)
     Return $keyStroke
   }
@@ -298,7 +298,7 @@ function UILicenseOption($choseOption, $avaListOption) {
       Write-Host $option.counter ":" $option.ProductName
     }
     Write-Host ""
-    $enteredOption = Read-Host "Input your option: "
+    $enteredOption = Read-Host "Input your option and press Enter "
   } until ($optionArrary -contains $enteredOption)
   $selectedOption = $avaListOption | Where-Object { $_.counter -eq $enteredOption }
   return $selectedOption
@@ -314,8 +314,8 @@ function UIExportUserWithSpecLic($accountSkuId, $avaListOption, $fileName) {
   $finalFileName = createCsvFile $fileName $accountSkuId.productName
   $userSkuProductName | Export-Csv -Path filesystem::.\$finalFileName -Force -Append -NoTypeInformation
   Write-Host "Done Exporting, file name is: "$finalFilename -ForegroundColor Yellow
-  Write-Host "Press any key to continue" -ForegroundColor Yellow
-  $keyStroke = readKey # Don't mind this, added this becasue system console will pipe into previous var => prevent that
+  Write-Host "Press Enter to continue" -ForegroundColor Yellow
+  Read-Host
   return $finalFileName
 }
 
@@ -329,7 +329,8 @@ function UIExportAssCombinedList($selectedProductAssign, $importUserProductExpor
   $combinedList | Export-Csv -Path filesystem::.\$finalFileName -Force -Append -NoTypeInformation
   Write-Host "Done Exporting, file name is: "$finalFileName -ForegroundColor Yellow
   Write-Host "Please review the plan first" -ForegroundColor Yellow
-  Write-Host "Press any key to promt confirm line" -ForegroundColor Yellow
+  Write-Host "Press Enter to promt confirm line" -ForegroundColor Yellow
+  Read-Host
   do {
     $keyStroke = readKey
     Write-Host "Press ""Y"" to continue" -ForegroundColor Yellow
@@ -374,8 +375,8 @@ function UIAssignLic($selectedProductUnassign, $combinedCsv, $avaListOption, $fi
   $assignResult | Export-Csv -Path filesystem::.\$finalFileName -Force -NoTypeInformation -Append
   Write-Host "Please check file "$finalFileName" for result" -ForegroundColor Yellow
   Write-Host "Done" -ForegroundColor Yellow
-  Write-Host "Press any key to back to main menu"
-  $keyStroke = readKey # Don't mind this, added this becasue system console will pipe into previous var => prevent that
+  Write-Host "Press Enter to back to main menu"
+  Read-Host
 }
 
 # Un-Assign license UI #
@@ -388,8 +389,8 @@ function UIUnassignLic($selectedProductUnassign, $combinedCsv, $avaListOption, $
   $unAssignResult | Export-Csv -Path filesystem::.\$finalFileName -Force -NoTypeInformation -Append
   Write-Host "Please check file "$finalFileName" for result" -ForegroundColor Yellow
   Write-Host "Done" -ForegroundColor Yellow
-  Write-Host "Press any key to back to main menu"
-  $keyStroke = readKey # Don't mind this, added this becasue system console will pipe into previous var => prevent that
+  Write-Host "Press Enter to back to main menu"
+  Read-Host
 }
 
 # Csv file browser UI #
@@ -397,14 +398,15 @@ function UIUnassignLic($selectedProductUnassign, $combinedCsv, $avaListOption, $
 function UICsvBrowser() {
   $csvFilePath = fileBrowser
   Write-Host "File path is: "$csvFilePath
-  Write-Host "Press any key to continue" -ForegroundColor Yellow
-  $keyStroke = readKey # Don't mind this, added this becasue system console will pipe into previous var => prevent that
+  Write-Host "Press Enter to continue" -ForegroundColor Yellow
+  Read-Host
   Return $csvFilePath
 }
 
 ##################################################################################################
 # Script Block #
 ##################################################################################################
+# Main logic
 $UI = {
   $choseOption = UIChoosingOption
   switch ($choseOption) {
@@ -437,6 +439,9 @@ $UI = {
           .$UI
         }
       }
+    }
+    "Q" {
+      Return
     }
   }
 }
