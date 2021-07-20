@@ -315,7 +315,7 @@ function UIExportUserWithSpecLic($accountSkuId, $avaListOption, $fileName) {
   $userSkuProductName | Export-Csv -Path filesystem::.\$finalFileName -Force -Append -NoTypeInformation
   Write-Host "Done Exporting, file name is: "$finalFilename -ForegroundColor Yellow
   Write-Host "Press Enter to continue" -ForegroundColor Yellow
-  Read-Host
+  $keyStroke = Read-Host
   return $finalFileName
 }
 
@@ -330,7 +330,7 @@ function UIExportAssCombinedList($selectedProductAssign, $importUserProductExpor
   Write-Host "Done Exporting, file name is: "$finalFileName -ForegroundColor Yellow
   Write-Host "Please review the plan first" -ForegroundColor Yellow
   Write-Host "Press Enter to promt confirm line" -ForegroundColor Yellow
-  Read-Host
+  $keyStroke2 = Read-Host
   do {
     $keyStroke = readKey
     Write-Host "Press ""Y"" to continue" -ForegroundColor Yellow
@@ -348,7 +348,8 @@ function UIExportUnassCombinedList($selectedProductUnassign, $importUserProductE
   $combinedList | Export-Csv -Path filesystem::.\$finalFileName -Force -Append -NoTypeInformation
   Write-Host "Done Exporting, file name is: "$finalFileName -ForegroundColor Yellow
   Write-Host "Please review the plan first" -ForegroundColor Yellow
-  Write-Host "Press any key to promt confirm line" -ForegroundColor Yellow
+  Write-Host "Press Enter promt confirm line" -ForegroundColor Yellow
+  $keyStroke2 = Read-Host
   do {
     $keyStroke = readKey
     Write-Host "Press ""Y"" to continue" -ForegroundColor Yellow
@@ -376,7 +377,7 @@ function UIAssignLic($selectedProductUnassign, $combinedCsv, $avaListOption, $fi
   Write-Host "Please check file "$finalFileName" for result" -ForegroundColor Yellow
   Write-Host "Done" -ForegroundColor Yellow
   Write-Host "Press Enter to back to main menu"
-  Read-Host
+  $keyStroke = Read-Host
 }
 
 # Un-Assign license UI #
@@ -390,7 +391,7 @@ function UIUnassignLic($selectedProductUnassign, $combinedCsv, $avaListOption, $
   Write-Host "Please check file "$finalFileName" for result" -ForegroundColor Yellow
   Write-Host "Done" -ForegroundColor Yellow
   Write-Host "Press Enter to back to main menu"
-  Read-Host
+  $keyStroke = Read-Host
 }
 
 # Csv file browser UI #
@@ -399,7 +400,7 @@ function UICsvBrowser() {
   $csvFilePath = fileBrowser
   Write-Host "File path is: "$csvFilePath
   Write-Host "Press Enter to continue" -ForegroundColor Yellow
-  Read-Host
+  $keyStroke = Read-Host
   Return $csvFilePath
 }
 
