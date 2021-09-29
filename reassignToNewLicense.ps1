@@ -36,7 +36,7 @@ function readKey() {
 
 # Provide license option base on skuFriendlyName.csv
 function provideAvailableLicenseOption() {
-  $importAvaLicOption = Import-Csv -Path filesystem::.\skuFriendlyName.csv
+  $importAvaLicOption = Import-Csv -Path .\skuFriendlyName.csv
   $counter = 0
   $avaListOption = @()
   # add counter into hash table for UILicenseOption option
