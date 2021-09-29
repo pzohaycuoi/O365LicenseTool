@@ -93,19 +93,19 @@ function createCsvFile($fileName, $productName) {
   $fileLogDate = (Get-Date -Format yy-MM-dd_HH-mm-ss)
   $procedFileName = "$fileName" + "_" + "$productName" + "_" + "$fileLogDate.csv" # csv file name
   # Create csv file for repot
-  $finalFileName = (New-Item -Path filesystem::.\ -Name $procedFileName -ItemType "file").Name
+  $finalFileName = (New-Item -Path .\ -Name $procedFileName -ItemType "file").Name
   Return $finalFileName
 }
 
 function importExportedCsv($fileName) {
-  $importExpCsv = Import-csv -Path filesystem::.\$fileName
+  $importExpCsv = Import-csv -Path .\$fileName
   return $importExpCsv
 }
 
 # Combine assign with exported list so the action function can be simplifed
 function exportAssPlan($selectedProductAssign, $exportedUserFile, $importType) {
   if ("Specify" -eq $importType) {
-    $exportedUserData = Import-Csv -Path filesystem::.\$exportedUserFile
+    $exportedUserData = Import-Csv -Path .\$exportedUserFile
   }
   elseif ("csv" -eq $importType) {
     $exportedUserData = Import-Csv -Path $exportedUserFile
@@ -126,7 +126,7 @@ function exportAssPlan($selectedProductAssign, $exportedUserFile, $importType) {
 # Combine Un-assign with exported list so the action function can be simplifed
 function exportUnassPlan($selectedProductUnassign, $exportedUserFile, $importType) {
   if ("Specify" -eq $importType) {
-    $exportedUserData = Import-Csv -Path filesystem::.\$exportedUserFile
+    $exportedUserData = Import-Csv -Path .\$exportedUserFile
   }
   elseif ("csv" -eq $importType) {
     $exportedUserData = Import-Csv -Path $exportedUserFile
@@ -312,10 +312,10 @@ function UIExportUserWithSpecLic($accountSkuId, $avaListOption, $fileName) {
   $userAndSku = getUserWithSpecifiedSku $accountSkuId.accountSkuId
   $userSkuProductName = getUserSkuProductName $userAndSku $avaListOption
   $finalFileName = createCsvFile $fileName $accountSkuId.productName
-  $userSkuProductName | Export-Csv -Path filesystem::.\$finalFileName -Force -Append -NoTypeInformation
+  $userSkuProductName | Export-Csv -Path .\$finalFileName -Force -Append -NoTypeInformation
   Write-Host "Done Exporting, file name is: "$finalFilename -ForegroundColor Yellow
   Write-Host "Press Enter to continue" -ForegroundColor Yellow
-  $keyStroke = Read-Host
+  $keyStroke = $keyStroke = Read-Host
   return $finalFileName
 }
 
@@ -326,11 +326,11 @@ function UIExportAssCombinedList($selectedProductAssign, $importUserProductExpor
   Write-Host "Exporting..."
   $combinedList = exportAssPlan $selectedProductAssign $importUserProductExport $importType
   $finalFileName = createCsvFile $fileName $selectedProductAssign.productName
-  $combinedList | Export-Csv -Path filesystem::.\$finalFileName -Force -Append -NoTypeInformation
+  $combinedList | Export-Csv -Path .\$finalFileName -Force -Append -NoTypeInformation
   Write-Host "Done Exporting, file name is: "$finalFileName -ForegroundColor Yellow
   Write-Host "Please review the plan first" -ForegroundColor Yellow
   Write-Host "Press Enter to promt confirm line" -ForegroundColor Yellow
-  $keyStroke2 = Read-Host
+  $keyStroke2 = $keyStroke = Read-Host
   do {
     $keyStroke = readKey
     Write-Host "Press ""Y"" to continue" -ForegroundColor Yellow
@@ -345,7 +345,7 @@ function UIExportUnassCombinedList($selectedProductUnassign, $importUserProductE
   Write-Host "Exporting..."
   $combinedList = exportUnassPlan $selectedProductUnassign $importUserProductExport $importType
   $finalFileName = createCsvFile $fileName $selectedProductUnassign.productName
-  $combinedList | Export-Csv -Path filesystem::.\$finalFileName -Force -Append -NoTypeInformation
+  $combinedList | Export-Csv -Path .\$finalFileName -Force -Append -NoTypeInformation
   Write-Host "Done Exporting, file name is: "$finalFileName -ForegroundColor Yellow
   Write-Host "Please review the plan first" -ForegroundColor Yellow
   Write-Host "Press Enter promt confirm line" -ForegroundColor Yellow
@@ -373,11 +373,11 @@ function UIAssignLic($selectedProductUnassign, $combinedCsv, $avaListOption, $fi
   Write-Host "Created file: "$finalFileName -ForegroundColor Yellow
   Write-Host "Assigning license..."
   $assignResult = assignLicense $combinedCsv $avaListOption
-  $assignResult | Export-Csv -Path filesystem::.\$finalFileName -Force -NoTypeInformation -Append
+  $assignResult | Export-Csv -Path .\$finalFileName -Force -NoTypeInformation -Append
   Write-Host "Please check file "$finalFileName" for result" -ForegroundColor Yellow
   Write-Host "Done" -ForegroundColor Yellow
   Write-Host "Press Enter to back to main menu"
-  $keyStroke = Read-Host
+  $keyStroke = $keyStroke = Read-Host
 }
 
 # Un-Assign license UI #
@@ -387,11 +387,11 @@ function UIUnassignLic($selectedProductUnassign, $combinedCsv, $avaListOption, $
   Write-Host "Created file: "$finalFileName -ForegroundColor Yellow
   Write-Host "Un-Assigning license..."
   $unAssignResult = unAssignLicense $combinedCsv $avaListOption
-  $unAssignResult | Export-Csv -Path filesystem::.\$finalFileName -Force -NoTypeInformation -Append
+  $unAssignResult | Export-Csv -Path .\$finalFileName -Force -NoTypeInformation -Append
   Write-Host "Please check file "$finalFileName" for result" -ForegroundColor Yellow
   Write-Host "Done" -ForegroundColor Yellow
   Write-Host "Press Enter to back to main menu"
-  $keyStroke = Read-Host
+  $keyStroke = $keyStroke = Read-Host
 }
 
 # Csv file browser UI #
@@ -400,7 +400,7 @@ function UICsvBrowser() {
   $csvFilePath = fileBrowser
   Write-Host "File path is: "$csvFilePath
   Write-Host "Press Enter to continue" -ForegroundColor Yellow
-  $keyStroke = Read-Host
+  $keyStroke = $keyStroke = Read-Host
   Return $csvFilePath
 }
 
